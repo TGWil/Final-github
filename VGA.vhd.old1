@@ -1,0 +1,186 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+use brick_pkg.all;
+
+entity VGA is 
+    port (
+        MAX10_CLK1_50 : in std_logic;
+        rst_l : in std_logic;
+        adv : in std_logic;
+        VGA_R : out std_logic_vector(3 downto 0);
+        VGA_G : out std_logic_vector(3 downto 0);
+        VGA_B : out std_logic_vector(3 downto 0);
+        VGA_VS : out std_logic;
+        VGA_HS : out std_logic
+    );
+end entity;
+
+
+architecture behavioral of VGA is
+    signal areset, inclk0, clk, locked : std_logic;
+    signal row, column: natural;
+	 type debounce is (idle, debouncing, done);
+	 signal debouncer : debounce;
+    type flag_type is (france, italy, ireland, belgium, mali, chad, nigeria, ivory, poland, germany, austria, congo);
+    signal flag, next_flag, cur_flag : flag_type;
+    signal de : std_logic := '1';
+    signal brick_index_x, brick_index_y : natural := 0;
+    signal bricks : brick_array := '1';
+    signal ccount, rcount : natural := 0;
+    signal offset, halfbrick : std_logic := 1;
+
+
+    component VGA_PLL 
+        port
+        (
+            areset : IN STD_LOGIC  := '0';
+            inclk0 : IN STD_LOGIC  := '0';
+            c0 : OUT STD_LOGIC ;
+            locked : OUT STD_LOGIC 
+        );
+    end component VGA_PLL;
+    
+    -- component modulo
+    --     port (
+    --         clk : in STD_LOGIC;
+    --         a, b : in STD_LOGIC_VECTOR(7 downto 0);
+    --         result : out STD_LOGIC_VECTOR(7 downto 0)
+    --     );
+    -- end component modulo;
+
+begin 
+
+    PLL_inst : VGA_PLL PORT MAP (
+		areset	 => areset,
+		inclk0	 => MAX10_CLK1_50,
+		c0	 => clk,
+		locked	 => locked
+	);
+
+    -- mod_inst : modulo Port Map (
+    --     clk => MAX10_CLK1_50,
+    --     a => mod_a,
+    --     b => mod_b,
+    --     result => mod_res
+    -- );
+
+    process(MAX10_CLK1_50, rst_l, adv) begin -- button presses/reset
+        if rising_edge(MAX10_CLK1_50) then
+            if rst_l = '0' then 
+					 debouncer <= idle;
+            end if;
+				case debouncer is
+					when idle =>
+					  if adv = '0' then
+							debouncer <= debouncing;
+					  else
+							debouncer <= idle;
+					  end if;
+				 when debouncing =>
+					  if adv = '0' then
+							debouncer <= debouncing;
+						
+						else
+							debouncer <= done;
+							de <= '0';
+						end if;
+					when done =>
+		
+				end case;
+			end if;
+    end process;
+    
+    process(clk, rst_l) begin -- column tracking
+        if rising_edge(clk) then
+            if rst_l = '0' then
+                column <= 0;
+                row <= 0;
+                column_counter <= 160;
+                VGA_R <= (others => '0');
+                VGA_G <= (others => '0');
+                VGA_B <= (others => '0');
+                VGA_HS <= '1';
+            end if;
+            if column < 16 then
+                VGA_R <= (others => '0');
+                VGA_G <= (others => '0');
+                VGA_B <= (others => '0');
+                VGA_HS <= '1';
+            elsif column >= 16 and column < 112 then
+                VGA_R <= (others => '0');
+                VGA_G <= (others => '0');
+                VGA_B <= (others => '0');
+                VGA_HS <= '0';
+            elsif column >= 112 and column < 160 then
+                VGA_R <= (others => '0');
+                VGA_G <= (others => '0');
+                VGA_B <= (others => '0');
+                VGA_HS <= '1';
+            elsif row >= 45 and row < 525 and column >= 160 then
+                -- Display stuff here
+                for rcount in 0 to 8 loop
+                    offset <= not offset;
+                    if rcount = 8 then 
+                        rcount <= 0;
+                        VGA_R <= (others => '1');
+                        VGA_G <= (others => '1');
+                        VGA_B <= (others => '1');
+                    elsif bricks(column-160, row-45, ) = '1'and offset = '0' then 
+                        if ccount = 16 then 
+                            VGA_R <= (others => '1');
+                            VGA_G <= (others => '1');
+                            VGA_B <= (others => '1');
+                            ccount <= 0;
+                        else 
+                            VGA_R <= (others => '1');
+                            VGA_G <= (others => '0');
+                            VGA_B <= (others => '0');
+                        end if;
+                        ccount <= ccount + 1;
+                        
+                    elsif bricks(column-160, row-45, ) = '1' and offset = '1' then
+                        if halfbrick = '1' and ccount = 8 then 
+                            VGA_R <= (others => '1');
+                            VGA_G <= (others => '1');
+                            VGA_B <= (others => '1');
+                            ccount <= 0;
+                            halfbrick <= '0';
+                        else 
+                            VGA_R <= (others => '1');
+                            VGA_G <= (others => '0');
+                            VGA_B <= (others => '0');
+                        end if;
+                        ccount <= ccount + 1;
+                        offset <= '0';
+                    elsif bricks(column-160, row-45) = '0' then
+                        VGA_R <= (others => '0');
+                        VGA_G <= (others => '0');
+                        VGA_B <= (others => '0');
+
+                    end if;
+                end loop;                    
+
+			end if;
+            if  column = 800 then
+                column <= 0;
+                row <= row + 1;
+            else
+                column <= column + 1;
+            end if;
+            if row = 525 then
+                row <= 0;
+            end if;
+        end if;
+    end process;
+
+    process(row) begin --Vertical syncing
+      if row > 9 and row < 12 then
+          VGA_VS <= '0';
+      else
+          VGA_VS <= '1';
+		end if;
+    end process;
+
+end architecture;

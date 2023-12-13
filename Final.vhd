@@ -43,17 +43,18 @@ architecture behavioral of Final is
     signal sound : sound_type;
     signal loopi, loopj, srloopi, srloopj : integer := 0;
     signal srball_pos_top_row, srball_pos_left_col, srball_pos_bottom_row, srball_pos_right_col, srball_pos_mid_row, srball_pos_mid_col : integer := 0;
+    signal areset, inclk0, clk, locked : std_logic;
 
 
     component VGA 
         port (
-            MAX10_CLK1_50 : in std_logic;
+            clk : in std_logic;
             rst_l : in std_logic;
             ball_pos: in pos;
             paddle_pos : in pos;
             bricks : in brick_array2;
-            row_count_out : out integer range 0 to 29;
-            col_count_out : out integer range 0 to 40;
+            -- row_count_out : out integer range 0 to 29;
+            -- col_count_out : out integer range 0 to 40;
             VGA_R : out std_logic_vector(3 downto 0);
             VGA_G : out std_logic_vector(3 downto 0);
             VGA_B : out std_logic_vector(3 downto 0);
@@ -93,18 +94,36 @@ architecture behavioral of Final is
         );
     end component;
 
+    component VGA_PLL 
+    port
+    (
+        areset : IN STD_LOGIC  := '0';
+        inclk0 : IN STD_LOGIC  := '0';
+        c0 : OUT STD_LOGIC ;
+        locked : OUT STD_LOGIC 
+    );
+    end component VGA_PLL;
+
+
 begin
+
+    PLL_inst : VGA_PLL PORT MAP (
+		areset	 => areset,
+		inclk0	 => MAX10_CLK1_50,
+		c0	 => clk,
+		locked	 => locked
+	);
 
     vga_inst : VGA 
         port map 
         (
-            MAX10_CLK1_50 => MAX10_CLK1_50,
+            clk => clk,
             rst_l => rst_l,
             ball_pos => cball_pos,
             paddle_pos => paddle_pos,
             bricks => cbricks_act,
-            row_count_out => row_count,
-            col_count_out => col_count,
+            -- row_count_out => row_count,
+            -- col_count_out => col_count,
             VGA_R => VGA_R,
             VGA_G => VGA_G,
             VGA_B => VGA_B,
@@ -182,6 +201,7 @@ begin
                 ny_vel <= cy_vel;
                 nball_pos <= cball_pos;
                 nballs <= cballs;
+                count <= 0;
                 if new_ball = '0' and cballs < 5 then
                     nballs <= cballs + 1;
                     random_en <= '1';
@@ -222,10 +242,10 @@ begin
                 nbricks_act <= cbricks_act;
                 nx_vel <= cx_vel;
                 ny_vel <= cy_vel;
-                -- nball_pos <= cball_pos;
+                nball_pos <= cball_pos;
                 nballs <= cballs;
-                nball_pos(0) <= cball_pos(0);
-                nball_pos(1) <= cball_pos(1);
+                -- nball_pos(0) <= cball_pos(0);
+                -- nball_pos(1) <= cball_pos(1);
                 -- ball_pos(0) <= ball_pos(0);
                 -- ball_pos(1) <= ball_pos(1);
 
@@ -233,7 +253,7 @@ begin
                     buzzer_en <= '0';
                 end if;
 
-                if count = 499999 then
+                if count = 400000 then
                     nball_pos(0) <= cball_pos(0) + cx_vel;
                     nball_pos(1) <= cball_pos(1) + cy_vel;
 

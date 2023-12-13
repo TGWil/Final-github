@@ -7,7 +7,7 @@ use work.brick_pkg.all;
 
 entity VGA is 
     port (
-        MAX10_CLK1_50 : in std_logic;
+        clk : in std_logic;
         rst_l : in std_logic;
         ball_pos : in pos;
         paddle_pos : in pos;
@@ -24,7 +24,7 @@ end entity;
 
 
 architecture behavioral of VGA is
-    signal areset, inclk0, clk, locked : std_logic;
+    -- signal areset, inclk0, clk, locked : std_logic;
     signal row, column : natural;
     signal drow, dcol, srdrow, srdcol : integer := 0;
     signal de : std_logic := '1';
@@ -33,25 +33,25 @@ architecture behavioral of VGA is
     -- signal bricks : brick_array := (others => (others => '1'));
 
 
-    component VGA_PLL 
-        port
-        (
-            areset : IN STD_LOGIC  := '0';
-            inclk0 : IN STD_LOGIC  := '0';
-            c0 : OUT STD_LOGIC ;
-            locked : OUT STD_LOGIC 
-        );
-    end component VGA_PLL;
+    -- component VGA_PLL 
+    --     port
+    --     (
+    --         areset : IN STD_LOGIC  := '0';
+    --         inclk0 : IN STD_LOGIC  := '0';
+    --         c0 : OUT STD_LOGIC ;
+    --         locked : OUT STD_LOGIC 
+    --     );
+    -- end component VGA_PLL;
     
 
 begin 
 
-    PLL_inst : VGA_PLL PORT MAP (
-		areset	 => areset,
-		inclk0	 => MAX10_CLK1_50,
-		c0	 => clk,
-		locked	 => locked
-	);
+    -- PLL_inst : VGA_PLL PORT MAP (
+	-- 	areset	 => areset,
+	-- 	inclk0	 => MAX10_CLK1_50,
+	-- 	c0	 => clk,
+	-- 	locked	 => locked
+	-- );
     
     process(clk, rst_l) begin -- column tracking
         if rising_edge(clk) then
